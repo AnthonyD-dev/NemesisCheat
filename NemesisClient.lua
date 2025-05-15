@@ -63,24 +63,6 @@ mods:Toggle("Infinite Jump",false, function(jmp)
     local Player = game:GetService("Players").LocalPlayer
     local Mouse = Player:GetMouse()
 end)
-
-mods:Toggle("Noclip", false, function(state)
-    _G.noclipEnabled = state
-    local player = game:GetService("Players").LocalPlayer
-    local RunService = game:GetService("RunService")
-
-    if not _G.noclipConnection then
-        _G.noclipConnection = RunService.Stepped:Connect(function()
-            if G.noclipEnabled and player.Character then
-                for , part in pairs(player.Character:GetDescendants()) do
-                    if part:IsA("BasePart") and part.CanCollide == true then
-                        part.CanCollide = false
-                    end
-                end
-            end
-        end)
-    end
-end)
 mods:Toggle("Fly | E", false, function(enabled)
     local Player = game.Players.LocalPlayer
     local Character = Player.Character or Player.CharacterAdded:Wait()
