@@ -67,19 +67,31 @@ end)
 mods:Toggle("Fly | E", false, function(enabled)
     local Player = game.Players.LocalPlayer
     local Character = Player.Character or Player.CharacterAdded:Wait()
-    local Humanoid = Character:WaitForChild("Humanoid")
+    local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
     local UserInputService = game:GetService("UserInputService")
+    local RunService = game:GetService("RunService")
+
     local flying = false
-    local flySpeed = 50
+    local speed = 50
+    local velocity = Vector3.new(0, 0, 0)
     local bodyVelocity
+    local connectionInput
+    local connectionRender
+
+    local moveVector = Vector3.new(0, 0, 0)
 
     local function startFly()
         if flying then return end
         flying = true
         bodyVelocity = Instance.new("BodyVelocity")
-        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
         bodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-        bodyVelocity.Parent = Character.HumanoidRootPart
+        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        bodyVelocity.Parent = HumanoidRootPart
+
+        connectionRender = RunService.RenderStepped:Connect(function()
+            bodyVelocity.Velocity = (HumanoidRootPart.CFrame.LookVector * moveVector.Z + HumanoidRootPart.CFrame.RightVector * moveVector.X) * speed
+            bodyVelocity.Velocity = Vector3.new(bodyVelocity.Velocity.X, (moveVector.Y * speed), bodyVelocity.Velocity.Z)
+        end)
     end
 
     local function stopFly()
@@ -87,6 +99,10 @@ mods:Toggle("Fly | E", false, function(enabled)
         if bodyVelocity then
             bodyVelocity:Destroy()
             bodyVelocity = nil
+        end
+        if connectionRender then
+            connectionRender:Disconnect()
+            connectionRender = nil
         end
     end
 
@@ -96,24 +112,49 @@ mods:Toggle("Fly | E", false, function(enabled)
         stopFly()
     end
 
-    local connection
-    connection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    connectionInput = UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
         if input.KeyCode == Enum.KeyCode.E then
             if flying then
                 stopFly()
-                mods:Set("Fly | E", false)
+                mods:Set("Fly (Press E to toggle)", false)
             else
                 startFly()
-                mods:Set("Fly | E", true)
+                mods:Set("Fly (Press E to toggle)", true)
             end
         end
     end)
 
-    -- Clean up when toggle is turned off manually
-    if not enabled and connection then
-        connection:Disconnect()
-    end
+    UserInputService.InputEnded:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        -- When key is released, reset the relevant moveVector part
+        if input.KeyCode == Enum.KeyCode.W or input.KeyCode == Enum.KeyCode.S then
+            moveVector = Vector3.new(moveVector.X, moveVector.Y, 0)
+        elseif input.KeyCode == Enum.KeyCode.A or input.KeyCode == Enum.KeyCode.D then
+            moveVector = Vector3.new(0, moveVector.Y, moveVector.Z)
+        elseif input.KeyCode == Enum.KeyCode.Space then
+            moveVector = Vector3.new(moveVector.X, 0, moveVector.Z)
+        elseif input.KeyCode == Enum.KeyCode.LeftControl then
+            moveVector = Vector3.new(moveVector.X, 0, moveVector.Z)
+        end
+    end)
+
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        if input.KeyCode == Enum.KeyCode.W then
+            moveVector = Vector3.new(moveVector.X, moveVector.Y, 1)
+        elseif input.KeyCode == Enum.KeyCode.S then
+            moveVector = Vector3.new(moveVector.X, moveVector.Y, -1)
+        elseif input.KeyCode == Enum.KeyCode.A then
+            moveVector = Vector3.new(-1, moveVector.Y, moveVector.Z)
+        elseif input.KeyCode == Enum.KeyCode.D then
+            moveVector = Vector3.new(1, moveVector.Y, moveVector.Z)
+        elseif input.KeyCode == Enum.KeyCode.Space then
+            moveVector = Vector3.new(moveVector.X, 1, moveVector.Z)
+        elseif input.KeyCode == Enum.KeyCode.LeftControl then
+            moveVector = Vector3.new(moveVector.X, -1, moveVector.Z)
+        end
+    end)
 end)
 
 mods:Seperator()
