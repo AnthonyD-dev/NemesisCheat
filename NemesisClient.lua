@@ -64,6 +64,77 @@ mods:Toggle("Infinite Jump",false, function(jmp)
     local Mouse = Player:GetMouse()
 end)
 
+mods:Toggle("Noclip", false, function(state)
+    _G.noclipEnabled = state
+    local player = game:GetService("Players").LocalPlayer
+    local RunService = game:GetService("RunService")
+
+    if not _G.noclipConnection then
+        _G.noclipConnection = RunService.Stepped:Connect(function()
+            if G.noclipEnabled and player.Character then
+                for , part in pairs(player.Character:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CanCollide == true then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    end
+end)
+mods:Toggle("Fly | E", false, function(enabled)
+    local Player = game.Players.LocalPlayer
+    local Character = Player.Character or Player.CharacterAdded:Wait()
+    local Humanoid = Character:WaitForChild("Humanoid")
+    local UserInputService = game:GetService("UserInputService")
+    local flying = false
+    local flySpeed = 50
+    local bodyVelocity
+
+    local function startFly()
+        if flying then return end
+        flying = true
+        bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        bodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+        bodyVelocity.Parent = Character.HumanoidRootPart
+    end
+
+    local function stopFly()
+        flying = false
+        if bodyVelocity then
+            bodyVelocity:Destroy()
+            bodyVelocity = nil
+        end
+    end
+
+    if enabled then
+        startFly()
+    else
+        stopFly()
+    end
+
+    local connection
+    connection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        if input.KeyCode == Enum.KeyCode.E then
+            if flying then
+                stopFly()
+                mods:Set("Fly (Press E to toggle)", false)
+            else
+                startFly()
+                mods:Set("Fly (Press E to toggle)", true)
+            end
+        end
+    end)
+
+    -- Clean up when toggle is turned off manually
+    if not enabled and connection then
+        connection:Disconnect()
+    end
+end)
+
+mods:Seperator()
+
 local cfov = mods:Slider("Custom FOV", 0, 120, 80, function(t)
 game.Workspace.CurrentCamera.FieldOfView = t
 end)
@@ -456,6 +527,54 @@ local ai = win:Server("A.I Combat", "")
 
 local aihome = ai:Channel("Home")
 
+aihome:Toggle("AI Lock", false, function(state)
+    _G.AimbotEnabled = state
+
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local LocalPlayer = Players.LocalPlayer
+    local Camera = workspace.CurrentCamera
+
+    local function getClosestTarget()
+        local closest = nil
+        local shortestDistance = math.huge
+
+        for _, npc in pairs(workspace:GetChildren()) do
+            if npc:IsA("Model") and npc:FindFirstChild("Humanoid") and npc:FindFirstChild("HumanoidRootPart") and npc ~= LocalPlayer.Character then
+                local pos, visible = Camera:WorldToViewportPoint(npc.HumanoidRootPart.Position)
+                if visible then
+                    local distance = (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
+                    if distance < shortestDistance then
+                        shortestDistance = distance
+                        closest = npc
+                    end
+                end
+            end
+        end
+
+        return closest
+    end
+
+    local function aimAt(target)
+        if target and target:FindFirstChild("HumanoidRootPart") then
+            local targetPos = target.HumanoidRootPart.Position
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+        end
+    end
+
+    if _G.AimbotConnection then
+        _G.AimbotConnection:Disconnect()
+    end
+
+    if _G.AimbotEnabled then
+        _G.AimbotConnection = RunService.RenderStepped:Connect(function()
+            local target = getClosestTarget()
+            if target then
+                aimAt(target)
+            end
+        end)
+    end
+end)
 local cfg = win:Server("Config", "http://www.roblox.com/asset/?id=6031075938")
 
 local savecfg = cfg:Channel("Save")
