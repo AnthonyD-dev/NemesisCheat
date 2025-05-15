@@ -63,6 +63,7 @@ mods:Toggle("Infinite Jump",false, function(jmp)
     local Player = game:GetService("Players").LocalPlayer
     local Mouse = Player:GetMouse()
 end)
+
 mods:Toggle("Fly | E", false, function(enabled)
     local Player = game.Players.LocalPlayer
     local Character = Player.Character or Player.CharacterAdded:Wait()
@@ -101,10 +102,10 @@ mods:Toggle("Fly | E", false, function(enabled)
         if input.KeyCode == Enum.KeyCode.E then
             if flying then
                 stopFly()
-                mods:Set("Fly (Press E to toggle)", false)
+                mods:Set("Fly | E", false)
             else
                 startFly()
-                mods:Set("Fly (Press E to toggle)", true)
+                mods:Set("Fly | E", true)
             end
         end
     end)
